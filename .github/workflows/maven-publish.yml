@@ -12,26 +12,42 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
+      contents: write
       packages: write
 
     steps:
       # Step 1: checkout code
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       # Step 2: get the current release version
       - name: version
         id: version
-        run: echo "version=$(git describe --tags --abbrev=1)" >> $GITHUB_OUTPUT
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
       # Step 3: generate change log
       - name: changelog
         id: changelog
         run: |
           response=$(curl --silent -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/wgzhao/Addax/releases/latest)
           last_tag=$(echo "$response" | grep \"tag_name\" | sed -E 's/.*"tag_name": "([^"]+)".*/\1/')
-          export LAST_TAG=${last_tag}                            
-          echo "Generating changelog from $last_tag to HEAD"
-          CHANGELOG=$(git log --oneline ${last_tag}..HEAD | sed 's/^/- /')
-          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+
+          if [ -z "$last_tag" ]; then
+            last_tag=$(git tag --sort=-version:refname | grep -Fvx "$GITHUB_REF_NAME" | head -n 1)
+          fi
+
+          if [ -n "$last_tag" ]; then
+            echo "Generating changelog from $last_tag to $GITHUB_REF_NAME"
+            CHANGELOG=$(git log --oneline "${last_tag}..HEAD" | sed 's/^/- /')
+          else
+            echo "Generating changelog from the beginning to $GITHUB_REF_NAME"
+            CHANGELOG=$(git log --oneline HEAD | sed 's/^/- /')
+          fi
+
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       # - name: 1. Import GPG key
       #   id: import_gpg
       #   uses: crazy-max/ghaction-import-gpg@v4
@@ -83,7 +99,7 @@ jobs:
             target/addax-${{ steps.version.outputs.version }}.tar.gz
             target/addax-${{ steps.version.outputs.version }}.tar.gz.sha256sum.asc
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4

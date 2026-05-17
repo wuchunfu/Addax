@@ -68,7 +68,15 @@ jobs:
           java-version: '17'
           distribution: 'adopt'
           server-id: ossrh # Value of the distributionManagement/repository/id field of the pom.xml
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
           settings-path: ${{ github.workspace }} # location for the settings.xml file
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASS_PHRASE }}
 
       - name: Build and packaging
         run: |
@@ -89,7 +97,7 @@ jobs:
           body: |
             # Addax  ${{ steps.version.outputs.version }} has released! 🎉
 
-            We are pleased to announce version ${{ steps.version.outputs.version }}, which focuses on improving stability and performance by addressing several bugs and implementing minor code refinements. 
+            We are pleased to announce version ${{ steps.version.outputs.version }}, which focuses on improving stability and performance by addressing several bugs and implementing minor code refinements.
             Below are the key updates in this release:
 
             ## 📜 Changes
@@ -126,3 +134,7 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/addax:latest
             quay.io/${{ secrets.QUAY_USERNAME }}/addax:${{ steps.version.outputs.version }}
             quay.io/${{ secrets.QUAY_USERNAME }}/addax:latest
+
+      - name: Publish to Maven Central
+        run: |
+          mvn -B -V -DskipTests -DautoPublish=true -DwaitUntil=PUBLISHED deploy

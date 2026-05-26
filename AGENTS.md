@@ -70,3 +70,73 @@ sh addax.sh -job /path/to/job.json
 5. 若无特别要求，PR 设为 Ready for review（非 Draft）。
 
 以上流程可由一句 "提交并创建 PR" 触发，不需要用户重复描述细节格式要求。
+
+## Commit Message 规范
+
+为保证提交历史可读、可检索、可自动化发布，统一使用 Conventional Commits 格式：
+
+```text
+<type>(<scope>)!: <subject>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### 1) 标题（第一行）强制规则
+
+- 必须使用英文。
+- `type` 必填，且只能是：`feat`、`fix`、`refactor`、`perf`、`docs`、`test`、`build`、`ci`、`chore`、`revert`。
+- `scope` 必填（本项目强制），用于标识模块或插件。
+- `subject` 使用祈使句现在时（如 add/fix/remove/refactor），首字母小写，不以句号结尾。
+- 标题总长度不超过 72 个字符。
+- 单个 commit 只做一件事，禁止混入无关改动。
+
+### 2) Scope 约束
+
+优先使用以下 scope：
+
+- `core`、`server`、`docs`、`build`、`ci`、`deps`、`release`、`script`
+- `lib-rdbms`、`lib-storage`
+- `plugin-<name>`（例如：`plugin-hdfswriter`、`plugin-mongodbreader`）
+
+### 3) Body 规则
+
+- 对 `feat`、`fix`、`refactor`、`perf`，建议必须写 body。
+- body 中至少说明三点：
+   - `why`: 为什么改
+   - `what`: 改了什么
+   - `impact`: 影响范围、兼容性、性能或行为变化
+
+### 4) Footer 规则
+
+- 关联 issue：`Refs: #123` 或 `Closes: #123`。
+- 破坏性变更必须使用 `!` 或 `BREAKING CHANGE:`，并明确迁移方式。
+
+### 5) 历史风格映射（统一口径）
+
+- `feature` -> `feat`
+- `bugfix` -> `fix`
+- `update` -> `chore`（仅版本/依赖更新）或 `fix`（修复问题）
+- `improve` -> `refactor` / `perf` / `feat`（按语义选择）
+- `[chore][3rd]` -> `chore(deps)`
+- `[chore][action]` / `[chore][github][action]` -> `ci(github-actions)`
+
+### 6) 示例
+
+```text
+feat(plugin-mongodbreader): support wildcard collection matching
+fix(lib-rdbms): avoid quoted-column mismatch in excludeColumn
+refactor(core): split yaml and json job config parser
+ci(github-actions): bump setup-java to v5
+chore(release): prepare 6.0.12
+docs(readme): clarify plugin development workflow
+```
+
+### 7) 自动校验（本地 + CI）
+
+- 本仓库提供统一校验脚本：`.github/scripts/lint-commit-msg.sh`。
+- 本地启用方式（仅需一次）：
+   - `git config core.hooksPath .githooks`
+   - `chmod +x .githooks/commit-msg .github/scripts/lint-commit-msg.sh`
+- CI 在 PR 中会校验所有非 merge commit；任一 commit message 不符合规范将直接失败。
